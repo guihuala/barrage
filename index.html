@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹幕</title>
+    <link rel="stylesheet" href="./alert.css">
+</head>
+
+<body>
+    <div id="title-box">
+        <h1 style="color: #ffffff; font-size: 5rem;">私人树洞</h1>
+    </div>
+
+    <div id="danmu-container"></div>
+
+    <div class="ui-box">
+        <div class="input-box">
+            <input type="text" id="danmu-input" placeholder="输入弹幕" maxlength="20">
+        </div>
+
+        <div class="btn-box">
+            <button id="send-btn">发送</button>
+            <button id="play-btn">播放</button>
+            <button id="pause-btn">暂停</button>
+            <button id="clear-btn">清空</button>
+        </div>
+    </div>
+
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p id="modal-text">这是一个自定义的弹出框。</p>
+        </div>
+    </div>
+
+    <style>
+        body {
+            overflow: hidden;
+            background-color: #cde2d6;
+            min-height: 100vh;
+        }
+
+        #title-box {
+            width: 100%;
+            height: 10vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #danmu-container {
+            position: relative;
+            width: calc(100vw - 16px);
+            top: 2vh;
+            height: 70vh;
+            overflow: hidden;
+            background-color: #ffffff;
+            border-radius: 30px;
+            box-shadow: inset 0 0 10px #6b6565;
+            background-size: 800% 800%;
+            animation: gradientBackground 15s ease infinite;
+        }
+
+        @keyframes gradientBackground {
+            0% {
+                background-position: 0% 25%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .danmu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            white-space: nowrap;
+            font-size: 40px;
+            text-shadow: 1px 1px 1px #ffffff;
+            animation: 10s slideIn linear;
+            font-weight: 1000;
+            transition: transform 0.3s;
+        }
+
+        .danmu:hover {
+            animation-play-state: paused;
+            transform: scale(1.2);
+        }
+
+        #danmu-input {
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #6b656579;
+            border-radius: 30px;
+            outline: none;
+            box-shadow: inset 0 0 7px #6b6565;
+        }
+
+        .ui-box {
+            position: relative;
+            top: 5vh;
+            width: 100%;
+            height: 10vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-box {
+            width: 50vw;
+            height: 100%;
+        }
+
+        .btn-box {
+            width: 30vw;
+            height: 100%;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #send-btn,
+        #play-btn,
+        #pause-btn,
+        #clear-btn {
+            width: 40%;
+            height: 50%;
+            margin-left: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 30px;
+            background-color: #ffffff02;
+            border: 1px solid #9f8872;
+            color: rgb(136, 103, 67);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        #send-btn:hover,
+        #play-btn:hover,
+        #pause-btn:hover,
+        #clear-btn:hover {
+            background-color: #ffffffd1;
+            transform: scale3d(1.1, 1.1, 1.1);
+        }
+
+        #send-btn:active,
+        #play-btn:active,
+        #pause-btn:active,
+        #clear-btn:active {
+            transform: scale3d(0.9, 0.9, 0.9);
+        }
+
+        @keyframes slideIn {
+            0% {
+                transform: translateX(100%);
+            }
+
+            100% {
+                transform: translateX(-500px);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .btn-box {
+                width: 50vw;
+                gap: 5px;
+            }
+
+            #send-btn,
+            #play-btn,
+            #pause-btn,
+            #clear-btn {
+                width: 30%;
+            }
+        }
+    </style>
+
+    <script src="./alert.js"></script>
+    <script>
+
+        document.getElementById('send-btn').addEventListener('click', function () {
+            var input = document.getElementById('danmu-input');
+            var danmuText = input.value.trim();
+            if (danmuText) {
+                createBarrage(danmuText);
+                storeBarrage(danmuText);
+                input.value = '';
+            }
+            else {
+                showModal('请输入弹幕');
+            }
+        });
+
+        document.getElementById('play-btn').addEventListener('click', function () {
+            var storedDanmus = localStorage.getItem('danmus');
+            if (!storedDanmus) {
+                showModal('没有弹幕');
+                return;
+            }
+            var danmus = JSON.parse(storedDanmus);
+            var danmusToShow = getRandomDanmus(danmus, 20);
+
+            var container = document.getElementById('danmu-container');
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            danmusToShow.forEach(createBarrage);
+        });
+
+        document.getElementById('pause-btn').addEventListener('click', function () {
+            var danmus = document.getElementById('danmu-container').children;
+            if (danmus.length > 0) {
+                if (danmus[0].style.animationPlayState === 'paused') {
+                    for (var i = 0; i < danmus.length; i++) {
+                        danmus[i].style.animationPlayState = 'running';
+                    }
+                } else {
+                    for (var i = 0; i < danmus.length; i++) {
+                        danmus[i].style.animationPlayState = 'paused';
+                    }
+                }
+            }
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', function () {
+            var container = document.getElementById('danmu-container');
+
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+
+            localStorage.removeItem('danmus');
+        });
+
+        function getRandomDanmus(allDanmus, count) {
+            let shuffled = allDanmus.sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
+        }
+
+        function createBarrage(text) {
+            var container = document.getElementById('danmu-container');
+            var BarrageDiv = document.createElement('div');
+
+            BarrageDiv.classList.add('danmu');
+            BarrageDiv.style.top = Math.random() * 63 + 'vh';
+            BarrageDiv.style.left = Math.random() * 100 + 'vw';
+            BarrageDiv.style.color = '#' + Math.floor(Math.random() * 0xffffff).toString(16);
+            BarrageDiv.textContent = text;
+            container.appendChild(BarrageDiv);
+
+            BarrageDiv.addEventListener('animationend', function () {
+                container.removeChild(BarrageDiv);
+            });
+        }
+
+        function storeBarrage(text) {
+            var danmus = JSON.parse(localStorage.getItem('danmus') || '[]');
+            danmus.push(text);
+            localStorage.setItem('danmus', JSON.stringify(danmus));
+        }
+
+        window.addEventListener('load', function () {
+            var danmus = JSON.parse(localStorage.getItem('danmus') || '[]');
+            danmus.forEach(createBarrage);
+        });
+    </script>
+</body>
+
+</html>
